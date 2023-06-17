@@ -1,0 +1,22 @@
+# before_sync -> excludes -> includes -> fetch -> sync -> cleanup -> after_sync
+sources:
+  - id: configs_s3
+    kind: s3
+    poll_interval: 30s
+    s3_config:
+      bucket_name: ${env:BUCKET_NAME}
+
+rules:
+  - id: prometheus
+    source: configs_s3
+    prefix: prometheus
+    max_failures: 2
+    after_sync:
+      - command: [ 'curl', '-XPOST', 'http://${env:PROMETHEUS_HOST}/reload' ]
+    includes:
+      - from: prometheus.yaml
+        to: /etc/prometheus
+        cleanup: false
+      - from: alerts/*
+        to: /etc/prometheus/alerts
+        cleanup: true

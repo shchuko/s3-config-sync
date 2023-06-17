@@ -1,0 +1,133 @@
+{
+  "$ref": "#/definitions/S3ConfigSync",
+  "definitions": {
+    "S3ConfigSync": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Source"
+          }
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SyncRule"
+          }
+        }
+      },
+      "required": [
+        "sources",
+        "rules"
+      ],
+      "title": "S3ConfigSync"
+    },
+    "Source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "poll_interval": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "config",
+        "id",
+        "kind"
+      ],
+      "title": "Source"
+    },
+    "SyncRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string",
+          "default": ""
+        },
+        "max_failures": {
+          "type": "integer"
+        },
+        "after_sync": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AfterSync",
+            "default": null
+          }
+        },
+        "includes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Include"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "includes",
+        "source"
+      ],
+      "title": "SyncRule"
+    },
+    "AfterSync": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "on_failure": {
+          "type": "string",
+          "enum": ["ignore", "fail_sync", "panic"],
+          "default": "fail_sync"
+        }
+      },
+      "required": [
+        "command",
+        "on_failure"
+      ],
+      "title": "AfterSync"
+    },
+    "Include": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "cleanup": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Include"
+    }
+  }
+}
