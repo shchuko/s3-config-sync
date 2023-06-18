@@ -37,16 +37,29 @@
         "poll_interval": {
           "type": "string"
         },
-        "config": {
-          "type": "object"
+        "s3_config": {
+          "$ref": "#/definitions/S3Config"
         }
       },
       "required": [
-        "config",
+        "s3_config",
         "id",
         "kind"
       ],
       "title": "Source"
+    },
+    "S3Config" : {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bucket_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bucket_name"
+      ],
+      "title": "s3_config"
     },
     "SyncRule": {
       "type": "object",
@@ -103,8 +116,7 @@
         }
       },
       "required": [
-        "command",
-        "on_failure"
+        "command"
       ],
       "title": "AfterSync"
     },
