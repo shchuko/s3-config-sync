@@ -29,3 +29,6 @@ require (
 	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/leodido/go-urn v1.1.0 // indirect
 )
+
+replace github.com/shchuko/s3-sync-config/sync-daemon/internal/collections => ./internal/collection
+replace github.com/shchuko/s3-sync-config/sync-daemon/internal/config_parser => ./internal/config_parser
