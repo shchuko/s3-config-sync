@@ -31,4 +31,5 @@ require (
 )
 
 replace github.com/shchuko/s3-sync-config/sync-daemon/internal/collections => ./internal/collection
+
 replace github.com/shchuko/s3-sync-config/sync-daemon/internal/config_parser => ./internal/config_parser
