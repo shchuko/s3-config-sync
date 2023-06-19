@@ -3,6 +3,7 @@ module github.com/shchuko/s3-sync-config/sync-daemon
 go 1.20
 
 require (
+	github.com/aws/aws-sdk-go-v2 v1.18.1
 	github.com/aws/aws-sdk-go-v2/config v1.18.27
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.35.0
 	github.com/creasty/defaults v1.7.0
@@ -11,7 +12,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.18.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.26 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.4 // indirect
@@ -28,8 +28,5 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.19.2 // indirect
 	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/leodido/go-urn v1.1.0 // indirect
+	github.com/stretchr/testify v1.7.0 // indirect
 )
-
-replace github.com/shchuko/s3-sync-config/sync-daemon/internal/collections => ./internal/collection
-
-replace github.com/shchuko/s3-sync-config/sync-daemon/internal/config_parser => ./internal/config_parser

@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	loader "github.com/shchuko/s3-sync-config/sync-daemon/internal/config_loader"
+	"github.com/shchuko/s3-sync-config/sync-daemon/internal/syncdaemon"
 	"os"
 )
 
@@ -28,11 +28,11 @@ func parseArgs() {
 
 func main() {
 	parseArgs()
-	var config loader.SyncConfig
 
-	if err := loader.LoadConfig(configPath, &config); err != nil {
-		fmt.Println("Error loading syncConfig:", err)
+	daemon := syncdaemon.NewSyncDaemon(configPath)
+	err := daemon.Run()
+	if err != nil {
+		fmt.Println("Sync Daemon error:", err)
 		os.Exit(1)
 	}
-	fmt.Printf("%#v", config)
 }
