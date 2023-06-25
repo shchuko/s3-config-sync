@@ -4,6 +4,13 @@ sources:
     kind: s3
     poll_interval: 30s
     s3_config:
+      region: ${env:AWS_REGION}
+      bucket_name: ${env:BUCKET_NAME}
+  - id: configs_s3_1
+    kind: s3
+    poll_interval: 15s
+    s3_config:
+      region: ${env:AWS_REGION}
       bucket_name: ${env:BUCKET_NAME}
 
 rules:
@@ -19,4 +26,23 @@ rules:
         cleanup: false
       - from: alerts/*
         to: /etc/prometheus/alerts
+        cleanup: true
+  - id: prometheus_1
+    source: configs_s3_1
+    prefix: prometheus
+    max_failures: 2
+    after_sync:
+      - command: [ 'curl', '-XPOST', 'http://${env:PROMETHEUS_HOST}/reload' ]
+    includes:
+      - from: prometheus.yaml
+        to: /etc/prometheus
+        cleanup: false
+      - from: alerts/*
+        to: /etc/prometheus/alerts
+        cleanup: true
+      - from: prometheus1.yaml
+        to: /etc/prometheus1
+        cleanup: false
+      - from: alerts1/*
+        to: /etc/prometheus/alerts1
         cleanup: true

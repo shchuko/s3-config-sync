@@ -54,10 +54,14 @@
       "properties": {
         "bucket_name": {
           "type": "string"
+        },
+        "region": {
+          "type": "string"
         }
       },
       "required": [
-        "bucket_name"
+        "bucket_name",
+        "region"
       ],
       "title": "s3_config"
     },
@@ -111,7 +115,7 @@
         },
         "on_failure": {
           "type": "string",
-          "enum": ["ignore", "fail_sync", "panic"],
+          "enum": ["ignore", "fail_sync"],
           "default": "fail_sync"
         }
       },

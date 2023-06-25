@@ -9,8 +9,9 @@ import (
 )
 
 type SyncSchedulerTask struct {
-	Runnable func() error
-	Rate     time.Duration
+	Runnable   func() error
+	Rate       time.Duration
+	StartDelay time.Duration
 }
 
 type Scheduler struct {
@@ -29,27 +30,22 @@ func NewScheduler() *Scheduler {
 	}
 }
 
-func (s *Scheduler) Schedule(tasks []SyncSchedulerTask) error {
+func (s *Scheduler) Schedule(tasks []SyncSchedulerTask) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	if s.stopFlag != nil {
-		stoppedBefore := s.stopFlag.CompareAndSwap(false, true)
-		s.wg.Wait() // wait for all tasks to finish
-
-		if stoppedBefore {
+		if !s.stopFlag.CompareAndSwap(false, true) { // if stopped by some other goroutine
 			if s.error != nil {
-				return errors.Join(errors.New("previously scheduled tasks are failed with error"), s.error)
+				s.error = errors.Join(errors.New("previously scheduled tasks are failed with error"), s.error)
 			}
-			return errors.New("scheduler is stopped, unable to schedule tasks")
+			s.error = errors.New("scheduler is stopped, unable to schedule tasks")
 		}
 	}
 
 	s.stopFlag = &atomic.Bool{}
 	s.wg.Add(1)
 	go s.scheduleTasks(tasks, s.stopFlag, &s.wg)
-
-	return nil
 }
 
 func (s *Scheduler) IsRunning() bool {
@@ -78,14 +74,14 @@ type internalSyncSchedulerTask struct {
 func (s *Scheduler) scheduleTasks(tasks []SyncSchedulerTask, stop *atomic.Bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 	internalTasks := collections.Map(tasks, func(t SyncSchedulerTask) *internalSyncSchedulerTask {
-		return &internalSyncSchedulerTask{t, time.UnixMilli(0)}
+		return &internalSyncSchedulerTask{t, time.Now().Add(-t.Rate + t.StartDelay)}
 	})
 	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			if stop.Load() {
-				s.error = nil
 				return
 			}
 
@@ -94,8 +90,10 @@ func (s *Scheduler) scheduleTasks(tasks []SyncSchedulerTask, stop *atomic.Bool, 
 				if task.lastStartTime.Add(task.Rate).Before(now) {
 					task.lastStartTime = now
 					if err := task.Runnable(); err != nil {
+						s.mutex.Lock()
 						s.stopFlag.Store(true)
 						s.error = err
+						s.mutex.Unlock()
 						return
 					}
 				}

@@ -29,3 +29,20 @@ func CheckUnique[T any, V comparable](data []T, f func(T) V) (bool, *V) {
 	}
 	return true, nil
 }
+
+func DistinctBy[T any, V comparable](data []T, f func(T) V) []T {
+	if data == nil {
+		return nil
+	}
+
+	s := map[V]bool{}
+	result := make([]T, 0, len(data))
+	for _, item := range data {
+		v := f(item)
+		if _, exists := s[v]; !exists {
+			result = append(result, item)
+		}
+		s[v] = true
+	}
+	return result
+}
