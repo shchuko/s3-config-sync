@@ -2,7 +2,6 @@ package syncdaemon
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"os/exec"
@@ -46,14 +45,17 @@ func (s *syncRule) evaluate(source *syncSourceSettings) error {
 		log.Info().
 			Str("source", source.id).
 			Str("rule", s.id).
-			Int("attempt", i).
+			Int("attempt", i+1).
+			Int("maxAttempts", s.maxFailures+1).
 			Msg("Rule evaluation started")
 
-		err = s.evaluateAttempt(source.source)
+		err = s.evaluateAttempt(source)
 		if err == nil {
 			log.Info().
 				Str("source", source.id).
 				Str("rule", s.id).
+				Int("attempt", i+1).
+				Int("maxAttempts", s.maxFailures+1).
 				Msg("Rule evaluation complete")
 			return nil
 		}
@@ -62,33 +64,43 @@ func (s *syncRule) evaluate(source *syncSourceSettings) error {
 			log.Err(err).
 				Str("source", source.id).
 				Str("rule", s.id).
-				Msg(fmt.Sprintf("Rule evaluation failed, exiting"))
+				Int("attempt", i+1).
+				Int("maxAttempts", s.maxFailures+1).
+				Msg("Rule evaluation failed, exiting")
 			return err
 		}
+
+		sleepDuration := 5 * time.Second
 		log.Err(err).
 			Str("source", source.id).
 			Str("rule", s.id).
-			Int("attempt", i).
-			Msg(fmt.Sprintf("Rule evaluation failed"))
+			Int("attempt", i+1).
+			Int("maxAttempts", s.maxFailures+1).
+			Msg(fmt.Sprintf("Rule evaluation failed, will retry in %v", sleepDuration))
+		time.Sleep(sleepDuration) // wait 5 seconds for recover
 		i++
 	}
 }
 
-func (s *syncRule) evaluateAttempt(source SyncConfigSource) error {
-	return source.IterateFiles(s.prefix, func(path string) error {
+func (s *syncRule) evaluateAttempt(source *syncSourceSettings) error {
+	err := source.source.IterateFiles(s.prefix, func(path string) error {
 		for _, include := range s.includes {
 			if err := include.doSync(path); err != nil {
 				return err
 			}
-
-			for _, command := range s.afterSync {
-				if err := command.invoke(); err != nil {
-					return err
-				}
-			}
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	for _, command := range s.afterSync {
+		if err := command.invoke(source.id, s.id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type syncRuleCommand struct {
@@ -109,15 +121,39 @@ const (
 	errorCardinality_ignore   = iota
 )
 
-func (s *syncRuleCommand) invoke() error {
-	if err := runExternalProcess(s.command); err != nil {
+func (s *syncRuleCommand) invoke(sourceId string, ruleId string) error {
+	log.Info().
+		Str("source", sourceId).
+		Str("rule", ruleId).
+		Str("command", fmt.Sprintf("%v", s.command)).
+		Msg("External process started")
+
+	stdout, stderr, err := runExternalProcess(s.command)
+	if err != nil {
+		logger := log.Err(err).
+			Str("source", sourceId).
+			Str("rule", ruleId).
+			Str("stdout", stdout).
+			Str("stderr", stderr).
+			Str("command", fmt.Sprintf("%v", s.command))
+
 		switch s.onFailure {
 		case errorCardinality_ignore:
+			logger.Str("onError", "ignore").Msg("External process failed")
 			return nil
 		case errorCardinality_failSync:
+			logger.Str("onError", "fail_sync").Msg("External process failed")
 			return err
 		}
 	}
+
+	log.Info().
+		Str("source", sourceId).
+		Str("rule", ruleId).
+		Str("command", fmt.Sprintf("%v", s.command)).
+		Str("stdout", stdout).
+		Str("stderr", stderr).
+		Msg("External process finished")
 	return nil
 }
 
@@ -142,8 +178,13 @@ func (s *syncRuleInclude) doSync(source string) error {
 	return nil
 }
 
-func runExternalProcess(args []string) error {
-	cmd := exec.Command(args[0], args[1:]...)
+func runExternalProcess(args []string) (string, string, error) {
+	var cmd *exec.Cmd
+	if len(args) > 1 {
+		cmd = exec.Command(args[0], args[1:]...)
+	} else {
+		cmd = exec.Command(args[0])
+	}
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -152,10 +193,5 @@ func runExternalProcess(args []string) error {
 	err := cmd.Run()
 	outStr := stdout.String()
 	errStr := stderr.String()
-	if err != nil {
-		detailedError := fmt.Errorf("failed to execute command '%v': stdout='%s', stderr='%s'", args, outStr, errStr)
-		return errors.Join(err, detailedError)
-	}
-
-	return nil
+	return outStr, errStr, err
 }

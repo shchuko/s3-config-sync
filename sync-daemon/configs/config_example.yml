@@ -17,9 +17,10 @@ rules:
   - id: prometheus
     source: configs_s3
     prefix: prometheus
-    max_failures: 2
+    max_failures: 5
     after_sync:
-      - command: [ 'curl', '-XPOST', 'http://${env:PROMETHEUS_HOST}/reload' ]
+      - command: [ 'curl',  '--fail', '--silent', '--show-error', '-XPOST', 'http://${env:PROMETHEUS_HOST}/reload' ]
+        on_failure: ignore
     includes:
       - from: prometheus.yaml
         to: /etc/prometheus
@@ -30,9 +31,10 @@ rules:
   - id: prometheus_1
     source: configs_s3_1
     prefix: prometheus
-    max_failures: 2
+    max_failures: 5
     after_sync:
-      - command: [ 'curl', '-XPOST', 'http://${env:PROMETHEUS_HOST}/reload' ]
+      - command: [ 'curl', '--fail', '--silent', '--show-error', '-XPOST', 'http://${env:PROMETHEUS_HOST}/reload' ]
+        on_failure: fail_sync
     includes:
       - from: prometheus.yaml
         to: /etc/prometheus

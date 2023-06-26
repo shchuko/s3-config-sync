@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/shchuko/s3-sync-config/sync-daemon/internal/syncdaemon"
 	"os"
 )
@@ -34,7 +34,7 @@ func main() {
 	daemon := syncdaemon.NewSyncDaemon(configPath, configAutoReload)
 	err := daemon.Run()
 	if err != nil {
-		fmt.Println("Sync Daemon error:", err)
+		log.Err(err).Msg("sync-daemon fatal error")
 		os.Exit(1)
 	}
 }
